@@ -8,20 +8,34 @@ import re
 import sys
 
 class PasswordChecker:
-    def __init__(self):
+    def __init__(self, strict_mode=False):
+        self.strict_mode = strict_mode
+        
         # Common weak passwords to check against
         self.common_passwords = [
             'password', '123456', '123456789', 'qwerty', 'abc123',
             'password123', 'admin', 'letmein', 'welcome', 'monkey',
             '1234567890', 'password1', 'qwerty123', 'admin123'
         ]
+        
+        # Extended list for strict mode
+        if strict_mode:
+            self.common_passwords.extend([
+                'football', 'baseball', 'dragon', 'master', 'jordan',
+                'access', 'shadow', 'princess', 'mustang', 'superman',
+                'michael', 'charlie', 'sunshine', 'computer', 'michelle'
+            ])
     
     def check_length(self, password):
         """Check if password meets length requirements"""
         length = len(password)
-        if length < 8:
-            return False, "Password should be at least 8 characters long"
-        elif length < 12:
+        min_length = 12 if self.strict_mode else 8
+        
+        if length < min_length:
+            return False, f"Password should be at least {min_length} characters long"
+        elif self.strict_mode and length < 16:
+            return True, "Good length, but 16+ characters is even better for strict mode"
+        elif not self.strict_mode and length < 12:
             return True, "Good length, but 12+ characters is even better"
         else:
             return True, "Excellent length"
@@ -38,12 +52,20 @@ class PasswordChecker:
         variety_count = sum(checks.values())
         missing_types = [key for key, value in checks.items() if not value]
         
-        if variety_count < 3:
-            return False, f"Include {', '.join(missing_types)} characters"
-        elif variety_count == 3:
-            return True, f"Good variety. Consider adding: {', '.join(missing_types)}"
+        if self.strict_mode:
+            # Strict mode requires ALL character types
+            if variety_count < 4:
+                return False, f"Strict mode requires all character types: {', '.join(missing_types)}"
+            else:
+                return True, "Excellent character variety - all types present"
         else:
-            return True, "Excellent character variety"
+            # Standard mode requires at least 3 types
+            if variety_count < 3:
+                return False, f"Include {', '.join(missing_types)} characters"
+            elif variety_count == 3:
+                return True, f"Good variety. Consider adding: {', '.join(missing_types)}"
+            else:
+                return True, "Excellent character variety"
     
     def check_common_passwords(self, password):
         """Check against common weak passwords"""
@@ -59,16 +81,29 @@ class PasswordChecker:
         if re.search(r'123|234|345|456|567|678|789|890', password):
             return False, "Avoid sequential numbers (123, 456, etc.)"
         
-        # Check for repeated characters
-        if re.search(r'(.)\1{2,}', password):
-            return False, "Avoid repeating the same character 3+ times"
+        # Check for repeated characters (stricter in strict mode)
+        repeat_limit = 2 if self.strict_mode else 3
+        repeat_pattern = f'(.)\\1{{{repeat_limit},}}'
+        if re.search(repeat_pattern, password):
+            limit_text = "2+" if self.strict_mode else "3+"
+            return False, f"Avoid repeating the same character {limit_text} times"
         
-        # Check for keyboard patterns
+        # Check for keyboard patterns (more extensive in strict mode)
         keyboard_patterns = ['qwer', 'asdf', 'zxcv', 'qaz', 'wsx']
+        if self.strict_mode:
+            keyboard_patterns.extend(['yuio', 'hjkl', 'bnm', 'edc', 'rfv', 'tgb'])
+        
         password_lower = password.lower()
         for pattern in keyboard_patterns:
             if pattern in password_lower:
                 return False, f"Avoid keyboard patterns like '{pattern}'"
+        
+        # Strict mode: Check for common words
+        if self.strict_mode:
+            common_words = ['admin', 'user', 'login', 'pass', 'root', 'test', 'guest']
+            for word in common_words:
+                if word in password_lower:
+                    return False, f"Avoid common words like '{word}'"
         
         return True, "No obvious patterns detected"
     
@@ -117,8 +152,9 @@ class PasswordChecker:
     
     def display_results(self, password, results):
         """Display password strength results"""
+        mode_text = "STRICT MODE" if self.strict_mode else "STANDARD MODE"
         print(f"\n{'='*50}")
-        print(f"PASSWORD STRENGTH ANALYSIS")
+        print(f"PASSWORD STRENGTH ANALYSIS ({mode_text})")
         print(f"{'='*50}")
         
         # Display overall strength
@@ -146,11 +182,15 @@ class PasswordChecker:
             print("• Your password needs significant improvement")
             print("• Address the failed checks above")
             print("• Consider using a password manager")
+            if self.strict_mode:
+                print("• Strict mode requires higher security standards")
         elif strength == "MEDIUM":
             print("⚠️  RECOMMENDATIONS:")
             print("• Your password is decent but could be stronger")
             print("• Address any remaining issues shown above")
             print("• Consider making it longer if possible")
+            if self.strict_mode:
+                print("• Strict mode has higher requirements for STRONG rating")
         else:
             print("✅ EXCELLENT:")
             print("• Your password meets security best practices")
