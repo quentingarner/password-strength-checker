@@ -166,7 +166,24 @@ def main():
     print("Note: Your password is not stored or transmitted anywhere.")
     print()
     
-    checker = PasswordChecker()
+    # Ask for strict mode
+    strict_input = input("Enable strict mode? (y/n): ").lower().strip()
+    strict_mode = strict_input.startswith('y')
+    
+    if strict_mode:
+        print("\n🔴 STRICT MODE ENABLED")
+        print("• Minimum 12 characters required")
+        print("• All character types required (upper, lower, digits, special)")
+        print("• Enhanced pattern detection")
+        print("• Expanded weak password database")
+    else:
+        print("\n🟡 STANDARD MODE")
+        print("• Minimum 8 characters required")
+        print("• At least 3 character types required")
+        print("• Basic security checks")
+    
+    print()
+    checker = PasswordChecker(strict_mode=strict_mode)
     
     try:
         # Get password input (hidden for security)
